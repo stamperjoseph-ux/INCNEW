@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>It's Not Christmas — 16-bit Forest Edition</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{
+  margin:0;height:100%;background:#032638;color:#eef3ff;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif
+}
+#wrap{
+  position:relative;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;height:100vh;gap:10px
+}
+canvas{
+  image-rendering:pixelated;image-rendering:crisp-edges;
+  background:#032638;
+  border:4px solid #1a3a4a;border-radius:12px;
+  box-shadow:0 0 0 8px #02141e,0 18px 38px rgba(0,0,0,.7),
+             inset 0 0 48px rgba(0,0,0,.8);
+  width:min(96vmin,100vw);
+  height:calc(min(96vmin,100vw)*(192/320));
+}
+#hud{
+  position:absolute;top:10px;display:flex;gap:20px;font-weight:700;
+  text-shadow:0 1px 0 #000;letter-spacing:.4px;
+}
+#title{
+  position:absolute;top:36px;opacity:.9;font-weight:800;letter-spacing:3px;
+  text-shadow:0 2px 0 #011;
+}
+.dpad{display:flex;flex-direction:column;gap:8px}
+.row{display:flex;gap:8px;justify-content:center}
+button{
+  font:inherit;padding:12px 14px;border-radius:10px;min-width:56px;
+  border:2px solid #28404f;background:linear-gradient(180deg,#153342,#0b1b26);
+  color:#f3f9ff;box-shadow:0 2px 0 #000,0 0 12px rgba(0,0,0,.8);
+}
+button[data-k="up"],button[data-k="down"]{
+  background:linear-gradient(180deg,#2f8b4c,#18542d);
+  border-color:#46b56b;
+}
+button[data-k="left"],button[data-k="right"]{
+  background:linear-gradient(180deg,#c42430,#7b101a);
+  border-color:#f14655;
+}
+button:active{transform:translateY(2px)}
+#controls{display:flex;justify-content:center}
+.screen{
+  position:absolute;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  background:rgba(2,8,16,.82);padding:28px;text-align:center;border-radius:12px;
+  box-shadow:0 0 26px rgba(0,0,0,.9);
+}
+.screen.hidden{display:none}
+.screen h2{margin:0 0 6px 0}
+ul.how{
+  list-style:disc;margin:10px 0 0 18px;
+  text-align:left;line-height:1.55
+}
+.badge{
+  background:#123044;border:1px solid #2b4b68;color:#a8f2ff;
+  padding:2px 8px;border-radius:999px;font-size:12px;margin-left:8px;
+}
+#music-toggle{
+  position:absolute;right:10px;bottom:10px;font-size:12px;padding:6px 10px;
+  background:linear-gradient(180deg,#2b4f7b,#163153);border-color:#4f8fd1;
+}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="game" width="320" height="192"></canvas>
+  <div id="hud">
+    <div id="score">Score: 0</div>
+    <div id="timer">01:30</div>
+    <div id="lives">❤❤❤❤</div>
+    <div class="badge">Forest 16-bit</div>
+  </div>
+  <div id="title">IT'S NOT CHRISTMAS</div>
+  <div id="controls">
+    <div class="dpad">
+      <button data-k="up">▲</button>
+      <div class="row">
+        <button data-k="left">◀</button>
+        <button data-k="right">▶</button>
+      </div>
+      <button data-k="down">▼</button>
+    </div>
+  </div>
+
+  <button id="music-toggle">Music: On</button>
+
+  <div id="start" class="screen">
+    <h2>IT'S NOT CHRISTMAS — 16-bit Forest</h2>
+    <p>Run through a snowy pixel forest clearing decorations while your song plays.</p>
+    <ul class="how">
+      <li>Move with arrow keys or on-screen D-pad (left/right only)</li>
+      <li>Walk into decorations to smoothly remove them</li>
+      <li>4 lives, 90 seconds — relaxed difficulty</li>
+    </ul>
+    <p style="font-size:13px;opacity:.85">
+      Music is ON by default. Hit Start to begin (browsers need a tap before audio).
+    </p>
+    <button id="play">Start</button>
+  </div>
+
+  <div id="over" class="screen hidden">
+    <h2>Game Over</h2>
+    <p id="final"></p>
+    <button id="again">Play Again</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  const c = document.getElementById('game');
+  const g = c.getContext('2d');
+  g.imageSmoothingEnabled = false;
+
+  const TILE = 16, W = c.width, H = c.height;
+  const COLS = W / TILE, ROWS = H / TILE;
+  const GROUND_ROW = ROWS - 3; // where the snowy platform sits
+
+  const EASY = {
+    spawn: 2.6,
+    minSpawn: 1.4,
+    lifeMin: 10,
+    lifeJitter: 8,
+    clearSpeed: 2.2,
+    clearDecay: 0.4
+  };
+
+  let score, lives, timeLeft, running;
+  let spawnEvery, spawnTimer;
+  let world = [], decos = [], player, particles = [];
+
+  // AUDIO: put your song file next to this file and name it exactly:
+  // its-not-christmas.mp3
+  const music = new Audio("its-not-christmas.mp3");
+  music.loop = true;
+  music.volume = 0.8;
+
+  // DEFAULT: music ON, will actually start playing when user hits Start
+  let musicEnabled = true;
+  const musicBtn = document.getElementById('music-toggle');
+  function updateMusicButton(){
+    musicBtn.textContent = "Music: " + (musicEnabled ? "On" : "Off");
+  }
+  musicBtn.addEventListener('click', () => {
+    musicEnabled = !musicEnabled;
+    if (musicEnabled) {
+      music.play().catch(()=>{});
+    } else {
+      music.pause();
+    }
+    updateMusicButton();
+  });
+  function startMusicIfEnabled(){
+    if (musicEnabled) {
+      music.play().catch(()=>{});
+    }
+  }
+  function stopMusic(){
+    music.pause();
+    music.currentTime = 0;
+  }
+
+  const keys = { up:false, down:false, left:false, right:false };
+  document.querySelectorAll('button[data-k]').forEach(b=>{
+    const k = b.dataset.k;
+    b.addEventListener('touchstart', e => { e.preventDefault(); keys[k] = true; });
+    b.addEventListener('touchend',   e => { e.preventDefault(); keys[k] = false; });
+    b.addEventListener('mousedown',  e => { e.preventDefault(); keys[k] = true; });
+    b.addEventListener('mouseup',    e => { e.preventDefault(); keys[k] = false; });
+    b.addEventListener('mouseleave', () => { keys[k] = false; });
+  });
+  window.addEventListener('keydown', e=>{
+    if(e.key === 'ArrowUp')    keys.up = true;
+    if(e.key === 'ArrowDown')  keys.down = true;
+    if(e.key === 'ArrowLeft')  keys.left = true;
+    if(e.key === 'ArrowRight') keys.right = true;
+  });
+  window.addEventListener('keyup', e=>{
+    if(e.key === 'ArrowUp')    keys.up = false;
+    if(e.key === 'ArrowDown')  keys.down = false;
+    if(e.key === 'ArrowLeft')  keys.left = false;
+    if(e.key === 'ArrowRight') keys.right = false;
+  });
+
+  const C = {
+    skyTop:'#0a8fb8',
+    skyMid:'#08789f',
+    skyBot:'#065978',
+    treeBack:'#05445a',
+    treeMid:'#043645',
+    treeFront:'#032a36',
+    snowHi:'#dff7ff',
+    snowMid:'#bfe4f7',
+    snowEdge:'#90bfd7',
+    skin:'#ffd9bf',
+    hair:'#26252a',
+    sweater:'#e33b4a',
+    sweater2:'#ff8b94',
+    pants:'#21415d',
+    shoes:'#101827',
+    glow:'#fff7cf',
+    white:'#f5f8fb',
+    decoR:'#ff5b5b',
+    decoG:'#41d984',
+    decoY:'#ffe47a',
+    trunk:'#b36b3b',
+    star:'#ffe987'
+  };
+
+  const scoreEl = document.getElementById('score');
+  const timerEl = document.getElementById('timer');
+  const livesEl = document.getElementById('lives');
+  const startScr = document.getElementById('start');
+  const overScr  = document.getElementById('over');
+  const finalEl  = document.getElementById('final');
+
+  document.getElementById('play').onclick  = start;
+  document.getElementById('again').onclick = start;
+
+  // set initial button label to On
+  updateMusicButton();
+
+  const ease = t => (t<0?0:t>1?1:1-Math.pow(1-t,3));
+
+  function genWorld(){
+    world = new Array(COLS*ROWS).fill(0);
+    for(let y=0;y<ROWS;y++){
+      for(let x=0;x<COLS;x++){
+        if (y === GROUND_ROW) {
+          world[y*COLS + x] = 2; // snowy platform
+        }
+      }
+    }
+  }
+
+  function mkPlayer(){
+    return {
+      x: Math.floor(COLS/2),
+      y: GROUND_ROW,
+      sp: 3.6 / TILE,
+      animT: 0,
+      frame: 0
+    };
+  }
+
+  function drawPlayer(p){
+    const px = (p.x|0)*TILE;
+    const py = (p.y|0)*TILE - 4; // stand slightly above ground
+
+    // shadow
+    g.fillStyle = 'rgba(0,0,0,.45)';
+    g.fillRect(px+3, py+TILE-1, TILE-6, 3);
+
+    const f = p.frame|0;
+
+    // legs
+    g.fillStyle = C.pants;
+    g.fillRect(px+6, py+9, 4, 4);
+
+    // shoes
+    g.fillStyle = C.shoes;
+    if(f===0 || f===2){
+      g.fillRect(px+5, py+13, 4, 2);
+      g.fillRect(px+9, py+13, 4, 2);
+    } else if(f===1){
+      g.fillRect(px+4, py+13, 4, 2);
+      g.fillRect(px+10, py+13, 4, 2);
+    } else {
+      g.fillRect(px+6, py+13, 4, 2);
+      g.fillRect(px+8, py+13, 4, 2);
+    }
+
+    // sweater
+    g.fillStyle = C.sweater;
+    g.fillRect(px+5, py+4, 7, 7);
+    g.fillStyle = C.sweater2;
+    g.fillRect(px+5, py+5, 7, 1);
+    g.fillStyle = C.white;
+    g.fillRect(px+5, py+10, 7, 1);
+
+    // head
+    g.fillStyle = C.skin;
+    g.fillRect(px+6, py+1, 5, 3);
+
+    // hair
+    g.fillStyle = C.hair;
+    g.fillRect(px+6, py, 5, 1);
+
+    // face detail
+    g.fillStyle = '#1b1b1b';
+    g.fillRect(px+7, py+2, 1, 1);
+  }
+
+  function spawnDeco(){
+    for(let tries=0; tries<60; tries++){
+      const dx = (Math.random()*COLS)|0;
+      const dy = GROUND_ROW;
+      if (Math.abs(dx - player.x) < 3) continue;
+      const life = EASY.lifeMin + Math.random()*EASY.lifeJitter;
+      const type = (Math.random() < 0.6) ? 'tree' : 'gift';
+      decos.push({ x:dx, y:dy, t:0, life, clear:0, clearing:false, kind:type });
+      break;
+    }
+  }
+
+  function drawDeco(d, now){
+    const bx = d.x*TILE;
+    const by = d.y*TILE - 10; // raise above ground
+
+    const timePct = d.t / d.life;
+    const blink = (timePct>0.85) && (((now/140)|0)%2===0);
+    const sc = d.clearing ? (1 - 0.3*ease(d.clear)) : 1;
+    const al = d.clearing ? (1 - 0.85*ease(d.clear)) : 1;
+
+    g.save();
+    g.translate(bx+TILE/2, by+TILE/2);
+    g.scale(sc, sc);
+    g.globalAlpha = al;
+
+    if(d.kind === 'tree'){
+      // trunk
+      g.fillStyle = C.trunk;
+      g.fillRect(-2,4,4,4);
+      // main tree body
+      g.fillStyle = C.decoG;
+      g.fillRect(-1,-4,2,2);
+      g.fillRect(-3,-2,6,2);
+      g.fillRect(-5,0,10,3);
+      g.fillRect(-6,3,12,3);
+      // ornaments
+      g.fillStyle = blink ? C.white : C.decoR;
+      g.fillRect(-3,0,1,1);
+      g.fillRect(1,1,1,1);
+      g.fillStyle = C.decoY;
+      g.fillRect(-1,-1,1,1);
+      g.fillRect(3,2,1,1);
+      // star
+      g.fillStyle = C.star;
+      g.fillRect(-1,-6,2,2);
+    } else {
+      // gift box
+      g.fillStyle = blink ? C.white : C.decoR;
+      g.fillRect(-5,0,10,7);
+      g.fillStyle = C.decoY;
+      g.fillRect(-1,0,2,7);
+      g.fillRect(-5,3,10,1);
+      // bow
+      g.fillRect(-2,-2,4,2);
+    }
+
+    g.restore();
+
+    if(d.clearing){
+      g.globalAlpha = 0.25*(1-ease(d.clear)) + 0.08;
+      g.fillStyle = C.glow;
+      g.fillRect(bx, d.y*TILE-1, TILE*ease(d.clear), 2);
+      g.globalAlpha = 1;
+    }
+  }
+
+  function spawnSparkles(cx,cy){
+    for(let i=0;i<16;i++){
+      particles.push({
+        x:cx,y:cy,
+        vx:(Math.random()-0.5)*1.1,
+        vy:(Math.random()-0.5)*1.1,
+        life:26 + ((Math.random()*8)|0)
+      });
+    }
+  }
+
+  function stepParticles(){
+    for(let i=particles.length-1;i>=0;i--){
+      const p = particles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.02;
+      p.life--;
+      if(p.life <= 0) particles.splice(i,1);
+    }
+  }
+
+  function drawParticles(){
+    g.fillStyle = C.glow;
+    for(const p of particles){
+      g.fillRect(p.x, p.y, 1, 1);
+    }
+  }
+
+  function drawForestBackground(now){
+    // gradient sky
+    const sky = g.createLinearGradient(0,0,0,H);
+    sky.addColorStop(0, C.skyTop);
+    sky.addColorStop(0.5, C.skyMid);
+    sky.addColorStop(1, C.skyBot);
+    g.fillStyle = sky;
+    g.fillRect(0,0,W,H);
+
+    // stars
+    g.fillStyle = 'rgba(255,255,255,0.6)';
+    for(let i=0;i<40;i++){
+      const x = (i*37) % W;
+      const y = (i*23) % (GROUND_ROW*TILE-12);
+      if(((now/800)|0 + i)%7===0){
+        g.fillRect(x, y, 1, 1);
+      }
+    }
+
+    // tree layers
+    function layer(color, offsetY, scale, jitter){
+      g.fillStyle = color;
+      for(let i=0;i<24;i++){
+        const baseX = (i*20 + (i*jitter)%13) % W;
+        const baseY = GROUND_ROW*TILE - offsetY;
+        const h = 18*scale;
+        const w = 14*scale;
+        g.beginPath();
+        g.moveTo(baseX, baseY);
+        g.lineTo(baseX + w/2, baseY - h);
+        g.lineTo(baseX - w/2, baseY - h);
+        g.closePath();
+        g.fill();
+      }
+    }
+    layer(C.treeBack, 28, 0.7, 3);
+    layer(C.treeMid, 20, 0.9, 5);
+    layer(C.treeFront, 12, 1.1, 7);
+
+    // snowy platform
+    const gy = GROUND_ROW*TILE;
+    g.fillStyle = C.snowEdge;
+    g.fillRect(0, gy+8, W, 12);
+    g.fillStyle = C.snowMid;
+    g.fillRect(0, gy, W, 10);
+    g.fillStyle = C.snowHi;
+    g.fillRect(0, gy, W, 3);
+  }
+
+  function start(){
+    genWorld();
+    player = mkPlayer();
+    decos = [];
+    particles = [];
+    score = 0;
+    lives = 4;
+    timeLeft = 90;
+    spawnEvery = EASY.spawn;
+    spawnTimer = 0;
+    startScr.classList.add('hidden');
+    overScr.classList.add('hidden');
+    running = true;
+    startMusicIfEnabled();
+  }
+
+  function over(){
+    running = false;
+    finalEl.textContent = 'Final Score: ' + score;
+    overScr.classList.remove('hidden');
+    stopMusic();
+  }
+
+  let last = performance.now();
+  function loop(now){
+    requestAnimationFrame(loop);
+    const dt = Math.min(0.05, (now-last)/1000);
+    last = now;
+
+    drawForestBackground(now);
+
+    if(running){
+      timeLeft -= dt;
+      if(timeLeft <= 0){
+        timeLeft = 0;
+        over();
+      }
+
+      spawnTimer += dt;
+      if(spawnTimer >= spawnEvery){
+        spawnTimer = 0;
+        spawnDeco();
+        if(spawnEvery > EASY.minSpawn) spawnEvery -= 0.015;
+      }
+
+      let vx = (keys.right?1:0) - (keys.left?1:0);
+      let vy = 0; // locked to ground for this art style
+      if(vx && vy){ vx *= 0.7071; vy *= 0.7071; }
+      player.x = Math.max(0, Math.min(COLS-1.01, player.x + vx*player.sp));
+      player.y = GROUND_ROW;
+      if(Math.abs(vx)+Math.abs(vy) > 0){
+        player.animT += dt*7;
+        player.frame = (player.animT % 1) * 4;
+      }
+
+      for(let i=decos.length-1;i>=0;i--){
+        const d = decos[i];
+        d.t += dt;
+        if(d.t >= d.life){
+          decos.splice(i,1);
+          lives--;
+          if(lives <= 0) over();
+          continue;
+        }
+        if(Math.abs(player.x-d.x)<0.6){
+          d.clearing = true;
+          d.clear += dt*EASY.clearSpeed;
+          if(d.clear >= 1){
+            spawnSparkles(d.x*TILE+TILE/2, d.y*TILE-2);
+            decos.splice(i,1);
+            score += 10;
+          }
+        } else {
+          d.clear = Math.max(0, d.clear - dt*EASY.clearDecay);
+          if(d.clear <= 0.01) d.clearing = false;
+        }
+      }
+    }
+
+    for(const d of decos) drawDeco(d, now);
+    stepParticles();
+    drawParticles();
+    drawPlayer(player);
+
+    scoreEl.textContent = 'Score: ' + score;
+    const m = String(Math.floor(timeLeft/60)).padStart(2,'0');
+    const s = String(Math.floor(timeLeft%60)).padStart(2,'0');
+    timerEl.textContent = m + ':' + s;
+    livesEl.textContent = '❤'.repeat(lives) + '♡'.repeat(Math.max(0,4-lives));
+  }
+
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
