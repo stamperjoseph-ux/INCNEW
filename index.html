@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>It's Not Christmas — Home for Christmas Edition</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{
+  margin:0;height:100%;background:#021622;color:#eef3ff;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif;
+}
+#wrap{
+  position:relative;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;height:100vh;gap:10px;
+}
+canvas{
+  image-rendering:pixelated;image-rendering:crisp-edges;
+  background:#021622;
+  border:4px solid #173243;border-radius:12px;
+  box-shadow:0 0 0 8px #020b10,0 18px 38px rgba(0,0,0,.7),
+             inset 0 0 48px rgba(0,0,0,.85);
+  width:min(96vmin,100vw);
+  height:calc(min(96vmin,100vw)*(192/320));
+}
+#hud{
+  position:absolute;top:8px;display:flex;gap:14px;font-weight:700;
+  text-shadow:0 1px 0 #000;letter-spacing:.4px;font-size:12px;
+}
+#title{
+  position:absolute;top:34px;opacity:.95;font-weight:800;letter-spacing:3px;
+  text-shadow:0 2px 0 #011;font-size:14px;
+}
+.dpad{display:flex;flex-direction:column;gap:6px}
+.row{display:flex;gap:6px;justify-content:center}
+button{
+  font:inherit;padding:10px 12px;border-radius:10px;min-width:54px;
+  border:2px solid #28404f;background:linear-gradient(180deg,#153342,#0b1b26);
+  color:#f3f9ff;box-shadow:0 2px 0 #000,0 0 12px rgba(0,0,0,.8);
+}
+button[data-k="jump"]{
+  background:linear-gradient(180deg,#2f8b4c,#18542d);
+  border-color:#46b56b;
+}
+button[data-k="duck"]{
+  background:linear-gradient(180deg,#c42430,#7b101a);
+  border-color:#f14655;
+}
+button:active{transform:translateY(2px)}
+#controls{
+  display:flex;justify-content:space-between;
+  width:min(96vmin,100vw);padding:0 10px;
+}
+.screen{
+  position:absolute;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  background:rgba(2,8,16,.86);padding:28px;text-align:center;border-radius:12px;
+  box-shadow:0 0 26px rgba(0,0,0,.9);
+}
+.screen.hidden{display:none}
+.screen h2{margin:0 0 6px 0}
+ul.how{
+  list-style:disc;margin:10px 0 0 18px;
+  text-align:left;line-height:1.55;font-size:13px;
+}
+.badge{
+  background:#123044;border:1px solid #2b4b68;color:#a8f2ff;
+  padding:2px 8px;border-radius:999px;font-size:11px;margin-left:4px;
+}
+#music-toggle{
+  position:absolute;right:10px;bottom:10px;font-size:12px;padding:6px 10px;
+  background:linear-gradient(180deg,#2b4f7b,#163153);border-color:#4f8fd1;
+}
+.subtitle{
+  font-size:13px;opacity:.9;margin-top:4px;
+}
+.links{
+  margin-top:10px;font-size:13px;display:flex;gap:12px;flex-wrap:wrap;justify-content:center;
+}
+.links a{
+  color:#b9ecff;text-decoration:none;border-bottom:1px dashed rgba(185,236,255,.6);
+}
+.links a:hover{
+  border-bottom-style:solid;
+}
+#cta{
+  position:absolute;bottom:40px;font-size:11px;opacity:.85;
+}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="game" width="320" height="192"></canvas>
+  <div id="hud">
+    <div id="score">Score: 0</div>
+    <div id="best">Best: 0</div>
+    <div id="timer">02:51</div>
+    <div id="lives">❤❤❤</div>
+    <div class="badge">Home for Christmas</div>
+  </div>
+  <div id="title">IT'S NOT CHRISTMAS</div>
+
+  <div id="controls">
+    <div class="dpad">
+      <div class="row">
+        <button data-k="left">◀</button>
+        <button data-k="right">▶</button>
+      </div>
+    </div>
+    <div class="dpad">
+      <button data-k="jump">JUMP ▲</button>
+      <button data-k="duck">DUCK ▼</button>
+    </div>
+  </div>
+
+  <button id="music-toggle">Music: On</button>
+  <div id="cta">Now playing: <strong>“It’s Not Christmas” – Joseph Stamper</strong></div>
+
+  <div id="start" class="screen">
+    <h2>IT'S NOT CHRISTMAS — Home for Christmas</h2>
+    <div class="subtitle">It's not Christmas... without you.</div>
+    <p style="max-width:260px;margin-top:10px">
+      Run through the snowy night, dodging Christmas chaos as you race home to the one who makes it feel like Christmas. Reach her before the song ends.
+    </p>
+    <ul class="how">
+      <li>Move: <strong>← →</strong> or on-screen arrows</li>
+      <li>Jump: <strong>↑</strong> or JUMP button</li>
+      <li>Duck / slide: <strong>↓</strong> or DUCK button</li>
+      <li>3 hearts. Hit obstacles or elves to lose one.</li>
+      <li>Make it to the end of the song to see the full ending.</li>
+    </ul>
+    <p style="font-size:13px;opacity:.85;margin-top:10px">
+      Music is ON by default. Hit Start to begin (browsers need a tap before audio).
+    </p>
+    <div class="subtitle" style="margin-top:6px;">
+      Song length: <strong>2:51</strong> — the run is tuned to match.
+    </div>
+    <div class="links">
+      <a href="#" target="_blank" rel="noopener">Listen on Spotify</a>
+      <a href="#" target="_blank" rel="noopener">Apple Music</a>
+    </div>
+    <button id="play" style="margin-top:16px;">Start</button>
+  </div>
+
+  <div id="over" class="screen hidden">
+    <h2>It’s Not Christmas Without You</h2>
+    <p id="final"></p>
+    <button id="again">Run Again</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  const c = document.getElementById('game');
+  const g = c.getContext('2d');
+  g.imageSmoothingEnabled = false;
+
+  const TILE = 16, W = c.width, H = c.height;
+  const groundY = H - 40;
+
+  const RUN_TIME = 171; // 2:51 in seconds
+
+  const C = {
+    skyTop:'#0a8fb8',
+    skyMid:'#08789f',
+    skyBot:'#053046',
+
+    forestBack:'#041e2b',
+    forestMid:'#06323f',
+    forestFrontDark:'#082f29',
+    forestFrontSnow:'#e5f5ff',
+    forestFrontSnowShadow:'#a8c4d5',
+
+    townDark:'#0b1c29',
+    house:'#28455a',
+    roof:'#1c3648',
+    windowWarm:'#ffd79a',
+
+    snowHi:'#e6f8ff',
+    snowMid:'#c7e5f6',
+    snowEdge:'#8fb3cc',
+
+    playerSkin:'#ffd9bf',
+    playerHair:'#3a2a20',
+    playerCoat:'#e33b4a',
+    playerTrim:'#ff8b94',
+    playerPants:'#1d3150',
+    playerBoot:'#f5ecde',
+
+    wifeHair:'#4b3425',
+    wifeSkin:'#ffd5c4',
+    wifeCoat:'#33363e',
+    carrier:'#44454c',
+    carrierLight:'#e1e3ea',
+    babySuit:'#c68b4a',
+
+    elfSkin:'#ffd7b0',
+    elfHat:'#2bb56f',
+    elfHatTrim:'#f5f8fb',
+    elfCoat:'#1c7948',
+    elfBoot:'#2a1a16',
+
+    obstacle:'#c43c3c',
+    obstacleStripe:'#ffe07b',
+
+    heart:'#ff6478',
+    glow:'#fff7cf',
+    white:'#f5f8fb',
+    lightWarm:'#ffecc5',
+    lightCool:'#9be2ff'
+  };
+
+  const scoreEl = document.getElementById('score');
+  const bestEl  = document.getElementById('best');
+  const timerEl = document.getElementById('timer');
+  const livesEl = document.getElementById('lives');
+  const startScr = document.getElementById('start');
+  const overScr  = document.getElementById('over');
+  const finalEl  = document.getElementById('final');
+
+  const music = new Audio("its-not-christmas.mp3");
+  music.loop = false;
+  music.volume = 0.9;
+
+  let musicEnabled = true;
+  const musicBtn = document.getElementById('music-toggle');
+  function updateMusicButton(){
+    musicBtn.textContent = "Music: " + (musicEnabled ? "On" : "Off");
+  }
+  musicBtn.addEventListener('click', () => {
+    musicEnabled = !musicEnabled;
+    if (musicEnabled) {
+      music.play().catch(()=>{});
+    } else {
+      music.pause();
+    }
+    updateMusicButton();
+  });
+  function startMusicIfEnabled(){
+    if (musicEnabled) {
+      music.currentTime = 0;
+      music.play().catch(()=>{});
+    }
+  }
+  function stopMusic(){
+    music.pause();
+    music.currentTime = 0;
+  }
+  updateMusicButton();
+
+  const keys = { left:false, right:false, jump:false, duck:false };
+  document.querySelectorAll('button[data-k]').forEach(b=>{
+    const k = b.dataset.k;
+    b.addEventListener('touchstart', e => { e.preventDefault(); keys[k] = true; });
+    b.addEventListener('touchend',   e => { e.preventDefault(); keys[k] = false; });
+    b.addEventListener('mousedown',  e => { e.preventDefault(); keys[k] = true; });
+    b.addEventListener('mouseup',    e => { e.preventDefault(); keys[k] = false; });
+    b.addEventListener('mouseleave', () => { keys[k] = false; });
+  });
+  window.addEventListener('keydown', e=>{
+    if(e.key === 'ArrowLeft')  keys.left = true;
+    if(e.key === 'ArrowRight') keys.right = true;
+    if(e.key === 'ArrowUp')    keys.jump = true;
+    if(e.key === 'ArrowDown')  keys.duck = true;
+  });
+  window.addEventListener('keyup', e=>{
+    if(e.key === 'ArrowLeft')  keys.left = false;
+    if(e.key === 'ArrowRight') keys.right = false;
+    if(e.key === 'ArrowUp')    keys.jump = false;
+    if(e.key === 'ArrowDown')  keys.duck = false;
+  });
+
+  const STATE = { MENU:0, PLAY:1, ENDING:2, DONE:3 };
+  let state = STATE.MENU;
+
+  let player, obstacles, particles, floatScores, timeLeft, lives, score, distance, scrollSpeed;
+  let endingTimer = 0;
+  let spawnTimer = 0;
+  let shakeTime = 0;
+
+  function resetGame(){
+    player = {
+      x: W*0.25,
+      y: groundY-16,
+      vy: 0,
+      onGround: true,
+      width: 10,
+      height: 14,
+      ducking: false,
+      anim: 0
+    };
+    obstacles = [];
+    particles = [];
+    floatScores = [];
+    timeLeft = RUN_TIME;
+    lives = 3;
+    score = 0;
+    distance = 0;
+    scrollSpeed = 55;
+    spawnTimer = 0;
+    shakeTime = 0;
+  }
+
+  resetGame();
+
+  let bestScore = Number(localStorage.getItem('inc_v3_best') || 0);
+  bestEl.textContent = 'Best: ' + bestScore;
+
+  function spawnObstacle(){
+    const types = ['low','mid','elf'];
+    const t = types[Math.floor(Math.random()*types.length)];
+    const baseX = W + 20;
+    const obj = { type:t, x:baseX, passed:false };
+
+    if(t==='low'){
+      obj.width = 18;
+      obj.height = 12;
+      obj.y = groundY-obj.height;
+    } else if(t==='mid'){
+      obj.width = 16;
+      obj.height = 24;
+      obj.y = groundY-obj.height;
+    } else if(t==='elf'){
+      obj.width = 14;
+      obj.height = 18;
+      obj.y = groundY-obj.height;
+    }
+    obstacles.push(obj);
+  }
+
+  function addParticles(x,y,color){
+    for(let i=0;i<10;i++){
+      particles.push({
+        x,y,
+        vx:(Math.random()-0.5)*40,
+        vy:(Math.random()-0.5)*40,
+        life:0.4+Math.random()*0.3,
+        color
+      });
+    }
+  }
+
+  function addFloatScore(x,y,val){
+    floatScores.push({x,y,val,life:1});
+  }
+
+  function takeHit(){
+    if(state !== STATE.PLAY) return;
+    lives--;
+    shakeTime = 0.3;
+    addParticles(player.x+player.width/2, player.y+player.height/2, C.heart);
+    if(lives <= 0){
+      endRun(false);
+    }
+  }
+
+  function endRun(success){
+    if(success){
+      state = STATE.ENDING;
+      endingTimer = 0;
+    } else {
+      state = STATE.DONE;
+      stopMusic();
+      if(score > bestScore){
+        bestScore = score;
+        localStorage.setItem('inc_v3_best', String(bestScore));
+      }
+      bestEl.textContent = 'Best: ' + bestScore;
+      finalEl.innerHTML = 'You got lost in the Christmas chaos.<br><strong>Score:</strong> ' + score + ' &nbsp;·&nbsp; <strong>Best:</strong> ' + bestScore;
+      overScr.classList.remove('hidden');
+    }
+  }
+
+  function drawPlayer(){
+    if(!player) return;
+    const px = player.x|0;
+    const py = player.y|0;
+
+    g.save();
+    if(player.ducking){
+      g.translate(0,3);
+    }
+
+    g.fillStyle = 'rgba(0,0,0,.5)';
+    g.fillRect(px-2, groundY+4, player.width+4, 3);
+
+    g.fillStyle = C.playerPants;
+    g.fillRect(px+2, py+8, 4, 6);
+    g.fillRect(px+6, py+8, 4, 6);
+
+    g.fillStyle = C.playerBoot;
+    g.fillRect(px+1, py+14, 5, 3);
+    g.fillRect(px+6, py+14, 5, 3);
+
+    g.fillStyle = C.playerCoat;
+    g.fillRect(px+1, py+4, 10, 7);
+    g.fillStyle = C.playerTrim;
+    g.fillRect(px+1, py+5, 10, 1);
+
+    g.fillStyle = C.playerSkin;
+    g.fillRect(px+3, py, 6, 4);
+
+    g.fillStyle = C.playerHair;
+    g.fillRect(px+3, py-1, 6, 2);
+
+    g.fillStyle = '#1b1b1b';
+    g.fillRect(px+4, py+1, 1, 1);
+    g.fillRect(px+6, py+1, 1, 1);
+    g.fillRect(px+5, py+2, 2, 1);
+
+    g.restore();
+  }
+
+  function drawWife(px,py){
+    g.fillStyle = 'rgba(0,0,0,.45)';
+    g.fillRect(px+4, py+24, 16, 3);
+
+    g.fillStyle = '#22252c';
+    g.fillRect(px+6, py+14, 4, 8);
+    g.fillRect(px+12, py+14, 4, 8);
+
+    g.fillStyle = C.playerBoot;
+    g.fillRect(px+5, py+22, 6, 3);
+    g.fillRect(px+11, py+22, 6, 3);
+
+    g.fillStyle = C.wifeCoat;
+    g.fillRect(px+5, py+8, 14, 8);
+
+    g.fillStyle = C.carrier;
+    g.fillRect(px+6, py+9, 12, 7);
+    g.fillStyle = C.carrierLight;
+    g.fillRect(px+7, py+10, 10, 2);
+    g.fillRect(px+9, py+12, 6, 2);
+
+    g.fillStyle = C.babySuit;
+    g.fillRect(px+9, py+11, 6, 5);
+    g.fillRect(px+9, py+10, 2, 1);
+    g.fillRect(px+13, py+10, 2, 1);
+
+    g.fillStyle = C.wifeSkin;
+    g.fillRect(px+8, py+3, 6, 4);
+
+    g.fillStyle = C.wifeHair;
+    g.fillRect(px+7, py+2, 8, 2);
+    g.fillRect(px+6, py+4, 2, 6);
+    g.fillRect(px+13, py+4, 2, 6);
+
+    g.fillStyle = '#1b1b1b';
+    g.fillRect(px+9, py+4, 1, 1);
+    g.fillRect(px+11, py+4, 1, 1);
+    g.fillRect(px+10, py+5, 2, 1);
+
+    g.fillStyle = C.heart;
+    g.fillRect(px+10, py+1, 2, 2);
+    g.fillRect(px+9, py+2, 4, 2);
+    g.fillRect(px+10, py+4, 2, 1);
+  }
+
+  function drawElf(o){
+    const x = o.x|0;
+    const y = o.y|0;
+    g.fillStyle = 'rgba(0,0,0,.45)';
+    g.fillRect(x, groundY+4, 12, 3);
+
+    g.fillStyle = C.elfCoat;
+    g.fillRect(x+2, y+10, 3, 4);
+    g.fillRect(x+7, y+10, 3, 4);
+
+    g.fillStyle = C.elfBoot;
+    g.fillRect(x+1, y+14, 4, 2);
+    g.fillRect(x+7, y+14, 4, 2);
+
+    g.fillStyle = C.elfCoat;
+    g.fillRect(x+1, y+6, 9, 4);
+
+    g.fillStyle = C.elfSkin;
+    g.fillRect(x+3, y+3, 5, 3);
+
+    g.fillStyle = C.elfHat;
+    g.fillRect(x+3, y+1, 5, 2);
+    g.fillStyle = C.elfHatTrim;
+    g.fillRect(x+2, y+2, 7, 1);
+
+    g.fillStyle = '#1b1b1b';
+    g.fillRect(x+4, y+4, 1, 1);
+  }
+
+  function drawObstacle(o){
+    const x = o.x|0;
+    const y = o.y|0;
+    if(o.type === 'low' || o.type === 'mid'){
+      g.fillStyle = C.obstacle;
+      g.fillRect(x, y, o.width, o.height);
+      g.fillStyle = C.obstacleStripe;
+      g.fillRect(x, y+Math.floor(o.height/2), o.width, 2);
+    } else if(o.type === 'elf'){
+      drawElf(o);
+    }
+  }
+
+  function drawPineTree(x, baseY, h, snowy, t, layer){
+    const segs = 3;
+    const segH = h / segs;
+    const baseW = h * 0.7;
+
+    // trunk
+    g.fillStyle = layer === 'back' ? '#021318' : '#041e16';
+    g.fillRect(x-2, baseY-4, 4, 4);
+
+    for(let i=0;i<segs;i++){
+      const yTop = baseY - (i+1)*segH;
+      const yBot = baseY - i*segH;
+      const w = baseW * (1 - i*0.2);
+      const cx = x;
+
+      g.fillStyle = layer === 'back' ? C.forestBack :
+                    layer === 'mid'  ? C.forestMid  : C.forestFrontDark;
+      g.beginPath();
+      g.moveTo(cx, yTop);
+      g.lineTo(cx - w/2, yBot);
+      g.lineTo(cx + w/2, yBot);
+      g.closePath();
+      g.fill();
+
+      if(snowy && layer === 'front'){
+        g.fillStyle = C.forestFrontSnow;
+        g.beginPath();
+        g.moveTo(cx, yTop+1);
+        g.lineTo(cx - w/2+2, yTop+3);
+        g.lineTo(cx + w/2-2, yTop+3);
+        g.closePath();
+        g.fill();
+
+        g.fillStyle = C.forestFrontSnowShadow;
+        g.fillRect(cx - w/2+2, yTop+3, w-4, 1);
+      }
+    }
+
+    if(snowy && layer === 'front'){
+      const blink = ((t/400)|0) % 2 === 0;
+      for(let i=0;i<4;i++){
+        const ang = (i/4)*Math.PI*2 + t*0.0007;
+        const lx = x + Math.cos(ang)* (baseW*0.25);
+        const ly = baseY - h*0.4 + Math.sin(ang)* (h*0.18);
+        g.fillStyle = (i%2===0)
+          ? (blink ? C.lightWarm : C.lightCool)
+          : (blink ? C.lightCool : C.lightWarm);
+        g.fillRect(lx|0, ly|0, 2, 2);
+      }
+    }
+  }
+
+  function drawBackground(t){
+    const sky = g.createLinearGradient(0,0,0,H);
+    sky.addColorStop(0, C.skyTop);
+    sky.addColorStop(0.5, C.skyMid);
+    sky.addColorStop(1, C.skyBot);
+    g.fillStyle = sky;
+    g.fillRect(0,0,W,H);
+
+    g.fillStyle = 'rgba(255,255,255,0.7)';
+    for(let i=0;i<40;i++){
+      const sx = (i*37 + t*0.02) % W;
+      const sy = (i*23) % (groundY-20);
+      if(((t/700)|0 + i)%7===0){
+        g.fillRect(sx, sy, 1, 1);
+      }
+    }
+
+    const progress = 1 - timeLeft/RUN_TIME;
+
+    function pineLayer(layer, count, offsetY, speed, snowy){
+      for(let i=0;i<count;i++){
+        const baseX = (i*40 + t*speed) % W;
+        const h = layer==='back' ? 32 : layer==='mid' ? 40 : 46;
+        const baseY = groundY - offsetY;
+        drawPineTree(baseX, baseY, h, snowy, t, layer);
+      }
+    }
+
+    pineLayer('back', 8, 26, 0.005, false);
+    pineLayer('mid', 9, 18, 0.01, false);
+    pineLayer('front', 7, 10, 0.016, true);
+
+    const warm = Math.max(0, progress-0.55)/0.45;
+    if(warm > 0){
+      const alpha = 0.14*warm;
+      g.fillStyle = 'rgba(255,200,140,'+alpha.toFixed(3)+')';
+      g.fillRect(0,groundY-40,W,40);
+      for(let i=0;i<8;i++){
+        const x = (i*40 + t*0.01) % W;
+        const w2 = 24;
+        const h2 = 18;
+        g.fillStyle = C.townDark;
+        g.fillRect(x, groundY-h2, w2, h2);
+        g.fillStyle = C.windowWarm;
+        g.fillRect(x+4, groundY-h2+6, 4, 4);
+        g.fillRect(x+14, groundY-h2+9, 4, 4);
+      }
+    }
+
+    g.fillStyle = C.snowEdge;
+    g.fillRect(0, groundY+10, W, H-groundY-10);
+    g.fillStyle = C.snowMid;
+    g.fillRect(0, groundY, W, 10);
+    g.fillStyle = C.snowHi;
+    g.fillRect(0, groundY, W, 3);
+
+    g.fillStyle = 'rgba(255,255,255,0.9)';
+    for(let i=0;i<40;i++){
+      const sx = (i*17 + t*0.03) % W;
+      const sy = (i*31 + t*0.07) % (groundY);
+      g.fillRect(sx, sy, 1, 1);
+    }
+
+    if(progress > 0.75){
+      const v = (progress-0.75)/0.25;
+      const grd = g.createRadialGradient(W*0.75, groundY-20, 10, W*0.75, groundY-20, 160);
+      grd.addColorStop(0, 'rgba(255,230,190,'+(0.4*v).toFixed(3)+')');
+      grd.addColorStop(1, 'rgba(255,230,190,0)');
+      g.fillStyle = grd;
+      g.fillRect(0,0,W,H);
+    }
+  }
+
+  function drawParticles(dt){
+    for(let i=particles.length-1;i>=0;i--){
+      const p = particles[i];
+      p.life -= dt;
+      if(p.life <= 0){
+        particles.splice(i,1);
+        continue;
+      }
+      p.x += p.vx*dt;
+      p.y += p.vy*dt;
+      g.globalAlpha = Math.max(0,p.life/0.6);
+      g.fillStyle = p.color || C.glow;
+      g.fillRect(p.x|0, p.y|0, 2, 2);
+      g.globalAlpha = 1;
+    }
+  }
+
+  function drawFloatScores(dt){
+    g.font = '6px monospace';
+    for(let i=floatScores.length-1;i>=0;i--){
+      const f = floatScores[i];
+      f.life -= dt;
+      f.y -= 18*dt;
+      if(f.life <= 0){
+        floatScores.splice(i,1);
+        continue;
+      }
+      g.globalAlpha = f.life;
+      g.fillStyle = C.heart;
+      g.fillText('+'+f.val, f.x|0, f.y|0);
+      g.globalAlpha = 1;
+    }
+  }
+
+  function rectsOverlap(ax,ay,aw,ah,bx,by,bw,bh){
+    return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
+  }
+
+  function update(dt, now){
+    if(state === STATE.PLAY){
+      timeLeft -= dt;
+      if(timeLeft <= 0){
+        timeLeft = 0;
+        endRun(true);
+      }
+
+      const prog = 1 - timeLeft/RUN_TIME;
+      scrollSpeed = 55 + prog*25;
+
+      let dir = 0;
+      if(keys.left) dir -= 1;
+      if(keys.right) dir += 1;
+      player.x += dir * 80 * dt;
+      player.x = Math.max(20, Math.min(W-40, player.x));
+
+      if(player.onGround && !player.ducking && keys.jump){
+        player.vy = -155;
+        player.onGround = false;
+        addParticles(player.x+player.width/2, player.y+player.height, C.white);
+      }
+
+      player.ducking = player.onGround && keys.duck;
+
+      player.vy += 420*dt;
+      player.y += player.vy*dt;
+      if(player.y + player.height >= groundY){
+        player.y = groundY - player.height;
+        player.vy = 0;
+        player.onGround = true;
+      }
+
+      spawnTimer -= dt;
+      if(spawnTimer <= 0){
+        spawnObstacle();
+        spawnTimer = 0.9 - prog*0.3;
+        if(spawnTimer < 0.5) spawnTimer = 0.5;
+      }
+
+      for(let i=obstacles.length-1;i>=0;i--){
+        const o = obstacles[i];
+        o.x -= scrollSpeed*dt;
+
+        if(!o.passed && o.x + o.width < player.x){
+          o.passed = true;
+          score += 5;
+          addFloatScore(o.x+o.width/2, o.y-4, 5);
+        }
+
+        if(o.x + o.width < -10){
+          obstacles.splice(i,1);
+          continue;
+        }
+
+        let ph = player.height;
+        let py = player.y;
+        if(player.ducking){
+          ph = player.height*0.6;
+          py = player.y + player.height*0.4;
+        }
+        if(rectsOverlap(player.x, py, player.width, ph, o.x, o.y, o.width, o.height)){
+          obstacles.splice(i,1);
+          takeHit();
+        }
+      }
+
+      distance += scrollSpeed*dt;
+    } else if(state === STATE.ENDING){
+      endingTimer += dt;
+
+      if(endingTimer > 0.1 && endingTimer < 2){
+        music.volume = Math.max(0.3, 0.9 - (endingTimer-0.1)*0.3);
+      }
+
+      const targetX = W*0.45;
+      player.x += (targetX - player.x)*3*dt;
+      if(player.onGround){
+        player.vy = 0;
+      }
+      player.y = groundY - player.height - Math.sin(endingTimer*4)*1.5;
+
+      if(endingTimer > 3){
+        state = STATE.DONE;
+        stopMusic();
+        if(score > bestScore){
+          bestScore = score;
+          localStorage.setItem('inc_v3_best', String(bestScore));
+        }
+        bestEl.textContent = 'Best: ' + bestScore;
+        finalEl.innerHTML = 'You made it home. It’s not Christmas without you.<br><strong>Score:</strong> ' + score + ' &nbsp;·&nbsp; <strong>Best:</strong> ' + bestScore;
+        overScr.classList.remove('hidden');
+      }
+    }
+
+    scoreEl.textContent = 'Score: ' + score;
+    const m = String(Math.floor(timeLeft/60)).padStart(2,'0');
+    const s = String(Math.floor(timeLeft%60)).padStart(2,'0');
+    timerEl.textContent = m + ':' + s;
+    livesEl.textContent = '❤'.repeat(lives) + '♡'.repeat(Math.max(0,3-lives));
+  }
+
+  function render(now){
+    drawBackground(now);
+
+    const progress = 1 - timeLeft/RUN_TIME;
+    if(progress > 0.7 || state === STATE.ENDING || state === STATE.DONE){
+      const wX = W*0.7 - 12;
+      const wY = groundY - 26;
+      drawWife(wX, wY);
+    }
+
+    obstacles.forEach(o => drawObstacle(o));
+    drawParticles(0.016);
+    drawPlayer();
+    drawFloatScores(0.016);
+  }
+
+  function gameLoop(ts){
+    const now = ts;
+    let dt = (now - last)/1000;
+    if(dt > 0.05) dt = 0.05;
+    last = now;
+
+    if(shakeTime > 0){
+      shakeTime -= dt;
+      const dx = (Math.random()-0.5)*4;
+      const dy = (Math.random()-0.5)*4;
+      g.save();
+      g.translate(dx,dy);
+      update(dt, now);
+      render(now);
+      g.restore();
+    } else {
+      update(dt, now);
+      render(now);
+    }
+
+    requestAnimationFrame(gameLoop);
+  }
+
+  document.getElementById('play').onclick = () => {
+    resetGame();
+    state = STATE.PLAY;
+    startScr.classList.add('hidden');
+    overScr.classList.add('hidden');
+    startMusicIfEnabled();
+  };
+
+  document.getElementById('again').onclick = () => {
+    resetGame();
+    state = STATE.PLAY;
+    overScr.classList.add('hidden');
+    startMusicIfEnabled();
+  };
+
+  let last = performance.now();
+  requestAnimationFrame(ts => { last = ts; requestAnimationFrame(gameLoop); });
+})();
+</script>
+</body>
+</html>
