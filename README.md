@@ -1,1 +1,0 @@
-Placeholder README – This version only generates the visible NOJEKYLL file.
