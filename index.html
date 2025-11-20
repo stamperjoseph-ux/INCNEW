@@ -38,14 +38,21 @@ button{
   border:2px solid #28404f;background:linear-gradient(180deg,#153342,#0b1b26);
   color:#f3f9ff;box-shadow:0 2px 0 #000,0 0 12px rgba(0,0,0,.8);
 }
+
+/* Bigger left/right buttons */
+button[data-k="left"],
+button[data-k="right"]{
+  padding:14px 20px;
+  min-width:70px;
+  font-size:18px;
+}
+
+/* Jump button accent */
 button[data-k="jump"]{
   background:linear-gradient(180deg,#2f8b4c,#18542d);
   border-color:#46b56b;
 }
-button[data-k="duck"]{
-  background:linear-gradient(180deg,#c42430,#7b101a);
-  border-color:#f14655;
-}
+
 button:active{transform:translateY(2px)}
 #controls{
   display:flex;justify-content:space-between;
@@ -112,8 +119,10 @@ ul.how{
       </div>
     </div>
     <div class="dpad">
-      <button data-k="jump">JUMP ▲</button>
-      <button data-k="duck">DUCK ▼</button>
+      <div class="row">
+        <!-- Duck button removed -->
+        <button data-k="jump">JUMP ▲</button>
+      </div>
     </div>
   </div>
 
@@ -129,7 +138,6 @@ ul.how{
     <ul class="how">
       <li>Move: <strong>← →</strong> or on-screen arrows</li>
       <li>Jump: <strong>↑</strong> or JUMP button</li>
-      <li>Duck / slide: <strong>↓</strong> or DUCK button</li>
       <li><strong>5 hearts.</strong> Grab heart pickups to heal.</li>
       <li>Collect stars for a brief shield against hits.</li>
       <li>Make it to the end of the song to see the full ending.</li>
@@ -284,6 +292,7 @@ ul.how{
   let shieldTime = 0;
   let pickups = [];
   let shakeTime = 0;
+  let hugHeartsDone = false;
 
   function resetGame(){
     player = {
@@ -308,6 +317,7 @@ ul.how{
     pickupTimer = 4;
     shieldTime = 0;
     shakeTime = 0;
+    hugHeartsDone = false;
   }
 
   resetGame();
@@ -384,6 +394,7 @@ ul.how{
     if(success){
       state = STATE.ENDING;
       endingTimer = 0;
+      hugHeartsDone = false;
     } else {
       state = STATE.DONE;
       stopMusic();
@@ -445,7 +456,7 @@ ul.how{
     g.restore();
   }
 
-  function drawWife(px,py){
+  function drawWife(px,py,hug){
     g.fillStyle = 'rgba(0,0,0,.45)';
     g.fillRect(px+4, py+24, 16, 3);
 
@@ -488,6 +499,14 @@ ul.how{
     g.fillRect(px+10, py+1, 2, 2);
     g.fillRect(px+9, py+2, 4, 2);
     g.fillRect(px+10, py+4, 2, 1);
+
+    if(hug){
+      g.fillStyle = C.heart;
+      g.fillRect(px+6, py-2, 2, 2);
+      g.fillRect(px+7, py-1, 2, 2);
+      g.fillRect(px+12, py-2, 2, 2);
+      g.fillRect(px+11, py-1, 2, 2);
+    }
   }
 
   function drawElf(o){
@@ -841,6 +860,12 @@ ul.how{
       }
       player.y = groundY - player.height - Math.sin(endingTimer*4)*1.5;
 
+      // Heart burst a moment into the hug
+      if(endingTimer > 1.3 && !hugHeartsDone){
+        addParticles(player.x+player.width/2, player.y, C.heart);
+        hugHeartsDone = true;
+      }
+
       if(endingTimer > 3){
         state = STATE.DONE;
         stopMusic();
@@ -871,10 +896,28 @@ ul.how{
     drawBackground(now);
 
     const progress = 1 - timeLeft/RUN_TIME;
-    if(progress > 0.7 || state === STATE.ENDING || state === STATE.DONE){
-      const wX = W*0.7 - 12;
-      const wY = groundY - 26;
-      drawWife(wX, wY);
+
+    // Wife appears later (closer to the end)
+    const showWife = (progress > 0.9 || state === STATE.ENDING || state === STATE.DONE);
+    if(showWife){
+      let wY = groundY - 26;
+      let wX;
+      let hug = false;
+
+      if(state === STATE.ENDING || state === STATE.DONE){
+        const targetX = (player ? player.x + 4 : W*0.45);
+        if(endingTimer < 0.8){
+          const startX = W*0.9 - 12;
+          const t = endingTimer / 0.8;
+          wX = startX + (targetX - startX)*t;
+        } else {
+          wX = targetX;
+          hug = true;
+        }
+      } else {
+        wX = W*0.75 - 12;
+      }
+      drawWife(wX, wY, hug);
     }
 
     obstacles.forEach(o => drawObstacle(o));
