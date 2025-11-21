@@ -1,4 +1,4 @@
-# It’s Not Christmas — Home for Christmas (Final Build)
+# It’s Not Christmas — Home for Christmas
 
 This folder contains the front-end files for the **It’s Not Christmas** promo game.
 
