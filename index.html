@@ -120,7 +120,7 @@ ul.how{
     </div>
     <div class="dpad">
       <div class="row">
-        <!-- Duck button removed -->
+        <!-- Only jump button (no duck) -->
         <button data-k="jump">JUMP ▲</button>
       </div>
     </div>
@@ -148,10 +148,18 @@ ul.how{
     <div class="subtitle" style="margin-top:6px;">
       Song length: <strong>2:51</strong> — the run is tuned to match.
     </div>
-    <div class="links">
-      <a href="#" target="_blank" rel="noopener">Listen on Spotify</a>
-      <a href="#" target="_blank" rel="noopener">Apple Music</a>
+
+    <!-- NEW: Single “Listen Here” button -->
+    <div class="links" style="margin-top:14px;">
+      <a id="listen-link" 
+         href="https://slinky.to/ItsNotChristmas" 
+         target="_blank" 
+         rel="noopener"
+         style="padding:6px 12px; border-radius:6px; background:#1a3a5a; border:1px solid #4c89c7; color:#b9ecff; text-decoration:none; border-bottom:none;">
+        🎧 Listen Here
+      </a>
     </div>
+
     <button id="play" style="margin-top:16px;">Start</button>
   </div>
 
